@@ -1,12 +1,13 @@
-using Dalamud.Game.Command;
 using Dalamud.IoC;
 using Dalamud.Plugin;
-using System.IO;
 using System.Linq;
+using System.Threading.Tasks;
 using Dalamud.Interface.Windowing;
 using Dalamud.Plugin.Services;
-using UkrChatSupport.Windows;
 using System;
+using UkrChatSupport.Sys;
+using UkrChatSupport.Windows;
+using System.Threading;
 
 namespace UkrChatSupport;
 
@@ -17,7 +18,20 @@ public sealed class Plugin : IDalamudPlugin
     [PluginService] internal static ICommandManager CommandManager { get; private set; } = null!;
     [PluginService] internal static IClientState ClientState { get; private set; } = null!;
     [PluginService] internal static IDataManager DataManager { get; private set; } = null!;
-    [PluginService] internal static IPluginLog Log { get; private set; } = null!;
+    [PluginService] internal static IPluginLog Log { get; set; } = null!;
+    [PluginService] private static IGameGui GameGui { get; set; } = null!;
+    [PluginService] public static IFramework Framework { get; private set; }
+
+
+    private int currentThreadId;
+    private uint foregroundThreadId;
+    private IntPtr foregroundWindow;
+    private bool isDisposed;
+    private volatile bool isHooked;
+    private KeyboardHook? keyboardHook;
+
+    private CancellationTokenSource? stopToken;
+
 
     public Configuration Configuration { get; init; }
 
@@ -27,26 +41,149 @@ public sealed class Plugin : IDalamudPlugin
     public Plugin()
     {
         Configuration = PluginInterface.GetPluginConfig() as Configuration ?? new Configuration();
-
         ConfigWindow = new ConfigWindow(this);
-
         WindowSystem.AddWindow(ConfigWindow);
-
         PluginInterface.UiBuilder.Draw += DrawUI;
-
-        // This adds a button to the plugin installer entry of this plugin which allows
-        // to toggle the display status of the configuration ui
         PluginInterface.UiBuilder.OpenConfigUi += ToggleConfigUI;
 
-        // Add a simple message to the log with level set to information
-        // Use /xllog to open the log window in-game
-        // Example Output: 00:57:54.959 | INF | [UkrChatSupport] ===A cool log message from Sample Plugin===
-        Log.Information($"===A cool log message from {PluginInterface.Manifest.Name}===");
+
+        if (Configuration.ReactOnlyToUkLayout || Configuration.ReplaceOnlyOnUkLayout) 
+        { 
+            InitCheckerThread();
+        }
+
+        currentThreadId = KeyboardHook.GetCurrentThreadId();
+        StartHook();
     }
+
+    private bool IsUkrainianLayout()
+    {
+        var currentLayout = NativeMethods.GetCurrentKeyboardLayout(foregroundThreadId);
+        // "uk" - ukrainian
+        return currentLayout.TwoLetterISOLanguageName.Equals("uk");
+    }
+
+
+    private void GetForeground()
+    {
+        foregroundWindow = NativeMethods.GetForegroundWindow();
+        foregroundThreadId = NativeMethods.GetWindowThreadProcessId(foregroundWindow, nint.Zero);
+        if (Input.IsGameFocused)
+            StartHook();
+        else
+            StopHook();
+    }
+
+    private void BackgroundWorker()
+    {
+        try
+        {
+            GetForeground();
+            while (stopToken?.IsCancellationRequested == false)
+            {
+                Task.Delay(1000, stopToken.Token).Wait();
+                GetForeground();
+            }
+        }
+        catch (TaskCanceledException) { }
+        catch (AggregateException ae)
+        {
+            if (ae.InnerException is not TaskCanceledException) throw;
+        }
+        catch (Exception e)
+        {
+            Log.Error(e, e.Message);
+        }
+    }
+
+    private void InitCheckerThread()
+    {
+        stopToken = new CancellationTokenSource();
+        var backgroundThread = new Thread(BackgroundWorker)
+        {
+            IsBackground = true,
+            Name = "Get foreground window thread"
+        };
+        backgroundThread.Start();
+    }
+
+
+
+    private void StartHook()
+    {
+        Framework.RunOnFrameworkThread(() =>
+        {
+            if (isHooked || keyboardHook is not null) return;
+            try
+            {
+                keyboardHook = new KeyboardHook(true);
+                keyboardHook.KeyDown += Handle_keyboardHookOnKeyDown;
+                keyboardHook.OnError += Handle_keyboardHook_OnError;
+                isHooked = true;
+            }
+            catch (Exception e)
+            {
+                Log.Error(e, e.Message);
+            }
+        });
+    }
+
+    private void StopHook()
+    {
+        Framework.RunOnFrameworkThread(() =>
+        {
+            if (!isHooked || keyboardHook is null) return;
+            try
+            {
+                keyboardHook.KeyDown -= Handle_keyboardHookOnKeyDown;
+                keyboardHook.OnError -= Handle_keyboardHook_OnError;
+                keyboardHook.Dispose();
+                keyboardHook = null;
+                isHooked = false;
+            }
+            catch (Exception e)
+            {
+                Log.Error(e, e.Message);
+            }
+        });
+    }
+
+    private void Handle_keyboardHookOnKeyDown(Constants.Keys key, bool shift, bool ctrl, bool alt, ref bool skipNext)
+    {
+        try
+        {
+            if (!Input.IsGameFocused ||
+                !Configuration.ReplaceInput ||
+                !Input.IsGameTextInputActive ||
+                (Configuration.ReplaceOnlyOnUkLayout && !IsUkrainianLayout())) return;
+
+            ReplaceInput(key, shift, ref skipNext);
+        }
+        catch (Exception e)
+        {
+            Log.Error(e, e.Message);
+        }
+    }
+
+    private void Handle_keyboardHook_OnError(Exception e)
+    {
+        Log.Error(e, e.Message);
+    }
+
+    private static void ReplaceInput(Constants.Keys aKey, bool aIsShift, ref bool aNextSkip)
+    {
+        foreach (var keyReplace in Constants.ReplaceKeys.Where(keyReplace => keyReplace.Key == aKey))
+        {
+            aNextSkip = true;
+            KeyboardHook.SendCharUnicode(aIsShift ? keyReplace.RCapitalKey : keyReplace.RKey);
+            return;
+        }
+    }
+
+
     public void Dispose()
     {
         WindowSystem.RemoveAllWindows();
-
         ConfigWindow.Dispose();
     }
 

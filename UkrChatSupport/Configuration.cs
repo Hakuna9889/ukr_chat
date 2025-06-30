@@ -1,4 +1,4 @@
-﻿using Dalamud.Configuration;
+using Dalamud.Configuration;
 using Dalamud.Plugin;
 using System;
 
@@ -13,7 +13,6 @@ public class Configuration : IPluginConfiguration
     public bool ReplaceOnlyOnUkLayout { get; set; } = true;
     public bool ReplaceInput { get; set; } = true;
 
-    // the below exist just to make saving less cumbersome
     public void Save()
     {
         Plugin.PluginInterface.SavePluginConfig(this);
