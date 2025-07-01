@@ -36,15 +36,15 @@ public sealed class Plugin : IDalamudPlugin
     public Configuration Configuration { get; init; }
 
     public readonly WindowSystem WindowSystem = new("UkrChatSupport");
-    private ConfigWindow ConfigWindow { get; init; }
+    //private ConfigWindow ConfigWindow { get; init; }
 
     public Plugin()
     {
         Configuration = PluginInterface.GetPluginConfig() as Configuration ?? new Configuration();
-        ConfigWindow = new ConfigWindow(this);
-        WindowSystem.AddWindow(ConfigWindow);
+        //ConfigWindow = new ConfigWindow(this);
+        //WindowSystem.AddWindow(ConfigWindow);
         PluginInterface.UiBuilder.Draw += DrawUI;
-        PluginInterface.UiBuilder.OpenConfigUi += ToggleConfigUI;
+        //PluginInterface.UiBuilder.OpenConfigUi += ToggleConfigUI;
 
 
         if (Configuration.ReactOnlyToUkLayout || Configuration.ReplaceOnlyOnUkLayout) 
@@ -184,10 +184,8 @@ public sealed class Plugin : IDalamudPlugin
     public void Dispose()
     {
         WindowSystem.RemoveAllWindows();
-        ConfigWindow.Dispose();
+        //ConfigWindow.Dispose();
     }
 
     private void DrawUI() => WindowSystem.Draw();
-
-    public void ToggleConfigUI() => ConfigWindow.Toggle();
 }

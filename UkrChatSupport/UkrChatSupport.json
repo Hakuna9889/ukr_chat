@@ -1,12 +1,13 @@
 {
   "Author": "Hakuna",
-  "Name": "UkrChatSupport",
-  "Punchline": "Support for ukrainian characters.",
-  "Description": "Support for ukrainian characters in text chat and input field.",
+  "Name": "Support for Ukrainian in chat",
+  "Punchline": "Support for Ukrainian characters.",
+  "Description": "Support for Ukrainian characters in text chat and input field.",
   "ApplicableVersion": "any",
   "Tags": [
     "chat",
     "ukr",
+    "Ukrainian",
     "UI"
   ],
   "CategoryTags": [
