@@ -3,7 +3,7 @@
         "Author": "Hakuna",
         "Name": "Support for Ukrainian in chat",
         "Description": "Support for Ukrainian characters in text chat and input field.",
-        "InternalName": "ACustomPlugin",
+        "InternalName": "UkrChatSupport",
         "AssemblyVersion": "0.1",
         "TestingAssemblyVersion": null,
         "RepoUrl": "https://github.com/Hakuna9889/ukr_chat",
