@@ -1,0 +1,25 @@
+[
+    {
+        "Author": "Hakuna",
+        "Name": "Support for Ukrainian in chat",
+        "Punchline": "Support for Ukrainian characters.",
+        "Description": "Support for Ukrainian characters in text chat and input field.",
+        "ApplicableVersion": "any",
+        "Tags": [
+            "chat",
+            "ukr",
+            "Ukrainian",
+            "UI"
+        ],
+        "CategoryTags": [
+            "Utility",
+            "UI"
+        ],
+        "RepoUrl": "https://github.com/Hakuna9889/ukr_chat",
+        "DalamudApiLevel": 12,
+        "DownloadLinkInstall": "https://github.com/Hakuna9889/ukr_chat/releases/download/release/latest.zip",
+        "DownloadLinkUpdate": "https://github.com/Hakuna9889/ukr_chat/releases/download/release/latest.zip",
+        "DownloadLinkTesting": "https://github.com/Hakuna9889/ukr_chat/releases/download/release/latest.zip",
+        "SupportsProfiles": true
+    }
+]
